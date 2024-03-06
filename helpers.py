@@ -5,6 +5,13 @@ class Point:
     def __init__(self, x=0, y=0):
         self.x = x
         self.y = y
+
+    # def
+
+    def __gt__(self, other):
+        if self.x == other.x:
+            return self.y > other.y
+        return self.x > other.x
     # def
 
 
@@ -41,7 +48,7 @@ class Segment:
     # the y-coordinate of the point on the segment whose x-coordinate ..
     #   is given. Segment boundaries are NOT enforced here.
     def calc(self, x):
-        return self.a() * (x + self.b())
+        return self.a() * x + self.b()
     # def
 
 
@@ -87,7 +94,7 @@ def intersection(s1, s2):  # (segment,segment) -> Point | None
 
         return Point(x, y)
     else:
-        return None;
+        return None
     # else
 
 
@@ -106,6 +113,9 @@ class CG24PriorityQueue:
     max3: bool  # bool
     t: int  # int
     arr: any  # any[]
+
+    def __len__(self):
+        return len(self.arr)
 
     class cEntry:
         # p   # double
@@ -131,10 +141,10 @@ class CG24PriorityQueue:
         if l.p != r.p:
             return (l.p > r.p) if self.max1 else (l.p < r.p)
         if l.p2 != r.p2:
-            return (l.p2 > r.p2) if self.max1 else (l.p2 < r.p2)
+            return (l.p2 > r.p2) if self.max2 else (l.p2 < r.p2)
         if l.p != r.p:
-            return (l.p3 > r.p3) if self.max1 else (l.p3 < r.p3)
-        return l.pzm < r.pzm;
+            return (l.p3 > r.p3) if self.max3 else (l.p3 < r.p3)
+        return l.pzm < r.pzm
 
     # def
 
@@ -195,4 +205,69 @@ class CG24PriorityQueue:
         self.arr.pop()
         return res
     # def
+
+
 # class
+
+class StatusLine:
+    arr: list[Segment]
+    x: int
+
+    def __init__(self, x):
+        self.arr = list()
+        self.x = x
+
+    def insert(self, item: Segment, x):
+        index = self.find_insert(item, x)
+        self.arr.insert(index, item)
+        return index
+
+    def find_insert(self, item: Segment, x):  # (Segment, int) -> (Segment, int)
+        self.x = x
+        start, end, mid = 0, len(self.arr), (len(self.arr) - 1) // 2
+        while start < end:
+            item_h, mid_h = item.calc(x), self.arr[mid].calc(x)
+            if item_h > mid_h:
+                start = mid + 1
+            if item_h < mid_h:
+                end = mid
+            mid = (start + end) // 2
+        else:
+            return start
+
+    def find(self, item: Segment, x):  # (Segment, int) -> (Segment, int)
+        self.x = x
+        start, end, mid = 0, len(self.arr) - 1, (len(self.arr) - 1) // 2
+        while start < end:
+            item_h, mid_h = item.calc(x), self.arr[mid].calc(x)
+            if item_h == mid_h:
+                return mid
+            if item_h > mid_h:
+                start = mid + 1
+            if item_h < mid_h:
+                end = mid
+            mid = (start + end) // 2
+        return None
+
+    def delete(self, item: Segment, x):
+        search = self.find(item, x)
+        if search:
+            self.arr.pop(search)
+
+    def swap(self, item1: Segment, item2: Segment, x):
+        index1 = self.find(item1, x)
+
+        if not index1 is None:
+            if index1 == len(self.arr):
+                index2 = index1 - 1
+            elif index1 == 0:
+                index2 = index1 + 1
+            else:
+                index2 = index1 + 1 if self.arr[index1 + 1] == item2 else index1 - 1
+            self.arr[index1], self.arr[index2] = self.arr[index2], self.arr[index1]
+
+    def above(self, index):
+        return self.arr[index + 1] if index < len(self.arr) - 1 else None
+
+    def below(self, index):
+        return self.arr[index - 1] if index > 0 else None

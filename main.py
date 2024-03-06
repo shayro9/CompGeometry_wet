@@ -1,6 +1,21 @@
 from sys import argv
+from helpers import *
+from enum import Enum
+import heapq
+from sortedcontainers import SortedList
 
-from helpers import Point, Segment
+
+class EventType(Enum):
+    START = 0
+    END = 1
+    INTERSECTION = 2
+
+
+class Event(Point):
+    def __init__(self, x, y, event_type, segment):
+        super().__init__(x, y)
+        self.type = event_type
+        self.segment = segment
 
 
 def interpret_file():
@@ -22,9 +37,53 @@ def interpret_file():
     return test_lines
 
 
-# Press the green button in the gutter to run the script.
+def handle_event(event, status, events):
+    segment = event.segment
+    x = event.x
+    if event.type == EventType.START:
+        index = status.insert(segment, x)
+        above = status.above(index)
+        below = status.below(index)
+
+        if above:
+            point = intersection(segment, above)
+            new_event = Event(point.x, point.y, EventType.INTERSECTION, [above, segment])
+            if new_event:
+                heapq.heappush(events, new_event)
+        if below:
+            point = intersection(segment, below)
+            new_event = Event(point.x, point.y, EventType.INTERSECTION, [below, segment])
+            if new_event:
+                heapq.heappush(events, new_event)
+        return 0
+
+    if event.type == EventType.INTERSECTION:
+        status.swap(segment[0], segment[1], x)
+        return 1
+    if event.type == EventType.END:
+        pass
+    return 0
+
+
+def count_intersections_sweep(segments):
+    events = []
+    counter = 0
+    for segment in segments:
+        events.append(Event(segment.p.x, segment.p.y, EventType.START, segment))
+        events.append(Event(segment.q.x, segment.q.y, EventType.END, segment))
+
+    heapq.heapify(events)
+    status = StatusLine(events[0].x)
+
+    while events:
+        event = heapq.heappop(events)
+        counter += handle_event(event, status, events)
+
+    print(counter)
+
+
 if __name__ == '__main__':
     tests_inputs = interpret_file()
-    pass
+    count_intersections_sweep(tests_inputs[0])
 
-# See PyCharm help at https://www.jetbrains.com/help/pycharm/
+    pass
