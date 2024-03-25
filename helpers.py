@@ -1,3 +1,8 @@
+from enum import Enum
+
+PRECISION = 5
+
+
 class Point:
     x: float  # float
     y: float  # float
@@ -25,34 +30,43 @@ class Segment:
     #
     p: Point  # Point, after input we compare and swap to guarantee that p.x <= q.x
     q: Point  # Point
+    a: float
+    b: float
 
     def __init__(self, p, q):
         if p.x > q.x:
             p, q = q, p
         self.p = p
         self.q = q
-
-    # def
-
-    # line: y = ax + b. it is guaranteed that the line is not vertical (a is finite)
-    def a(self):  # () -> double
-        return (self.p.y - self.q.y) / (self.p.x - self.q.x)
-
-    # def
-
-    def b(self):  # () -> double
-        return self.p.y - (self.a() * self.p.x)
+        self.a = (self.p.y - self.q.y) / (self.p.x - self.q.x)
+        self.b = self.p.y - (self.a * self.p.x)
 
     # def
 
     # the y-coordinate of the point on the segment whose x-coordinate ..
     #   is given. Segment boundaries are NOT enforced here.
     def calc(self, x):
-        return self.a() * x + self.b()
+        return self.a * x + self.b
     # def
 
 
 # class
+
+class EventType(Enum):
+    START = 0
+    END = 1
+    INTERSECTION = 2
+
+
+class Event(Point):
+    def __init__(self, x, y, event_type, segment):
+        super().__init__(x, y)
+        self.type = event_type
+        self.segment = segment
+
+    def __eq__(self, other):
+        return self.x == other.x and self.y == other.y
+
 
 def is_left_turn(a, b, c):  # (Point,Point,Point) -> bool
     x1 = a.x
@@ -70,11 +84,11 @@ def intersection(s1, s2):  # (segment,segment) -> Point | None
     if ((is_left_turn(s1.p, s1.q, s2.p) != is_left_turn(s1.p, s1.q, s2.q)) and
             (is_left_turn(s2.p, s2.q, s1.p) != is_left_turn(s2.p, s2.q, s1.q))):
 
-        a1 = s1.a()
-        a2 = s2.a()
+        a1 = s1.a
+        a2 = s2.a
 
-        b1 = s1.b()
-        b2 = s2.b()
+        b1 = s1.b
+        b2 = s2.b
 
         # commutation consistency: sort by a (then by b)
         if a1 > a2 or (a1 == a2 and b1 > b2):
@@ -103,111 +117,8 @@ def intersection(s1, s2):  # (segment,segment) -> Point | None
 def intersects(s1, s2):  # (Segment,Segment) -> bool
     return not (intersection(s1, s2) is None)
 
-
 # def
 
-
-class CG24PriorityQueue:
-    max1: bool  # bool
-    max2: bool  # bool
-    max3: bool  # bool
-    t: int  # int
-    arr: any  # any[]
-
-    def __len__(self):
-        return len(self.arr)
-
-    class cEntry:
-        # p   # double
-        # p2  # double
-        # p3  # double
-        # pzm # int
-        # data
-        def __init__(self):
-            pass
-
-    # class
-
-    def __init__(self, priorityMax=True, tiebreakerMax=True, tiebreaker2Max=True):
-        self.max1 = priorityMax
-        self.max2 = tiebreakerMax
-        self.max3 = tiebreaker2Max
-        self.t = int(0)
-        self.arr = list()
-
-    # def
-
-    def compare(self, l, r):  # (p1,p2) -> bool
-        if l.p != r.p:
-            return (l.p > r.p) if self.max1 else (l.p < r.p)
-        if l.p2 != r.p2:
-            return (l.p2 > r.p2) if self.max2 else (l.p2 < r.p2)
-        if l.p != r.p:
-            return (l.p3 > r.p3) if self.max3 else (l.p3 < r.p3)
-        return l.pzm < r.pzm
-
-    # def
-
-    def insert(self, data, p, tiebreaker=0, tiebreaker2=0):  # (any, double[, double[, double]]) -> void
-        entry = CG24PriorityQueue.cEntry()
-        entry.p = float(p)
-        entry.p2 = float(tiebreaker)
-        entry.p3 = float(tiebreaker2)
-        entry.pzm = self.t
-        entry.data = data
-
-        self.t = self.t + int(1)
-        self.arr.append(entry)
-        # heapify up
-        i = int(len(self.arr)) - int(1)
-        parent = int(i / 2)
-        while i != parent and self.compare(self.arr[i], self.arr[parent]):
-            self.arr[i], self.arr[parent] = self.arr[parent], self.arr[i]
-            i = parent
-            parent = int(i / 2)
-
-    # def
-
-    def empty(self):  # () -> bool
-        return 0 == len(self.arr)
-
-    # def
-
-    def pop(self):  # () -> any
-        if 0 == len(self.arr):
-            return self.arr[0]  # raise exception
-
-        res = self.arr[0].data
-
-        if len(self.arr) > 1:
-            n = len(self.arr)
-            self.arr[0], self.arr[n - 1] = self.arr[n - 1], self.arr[0]
-            n = n - 1
-
-            i = 0
-            while i < n:
-                best = i
-                j1 = int(2 * i + 1)
-                j2 = int(2 * i + 2)
-                if j1 < n and self.compare(self.arr[j1], self.arr[best]):
-                    best = j1
-                # if
-                if j2 < n and self.compare(self.arr[j2], self.arr[best]):
-                    best = j2
-                # if
-                if best == i:
-                    break
-                # if
-                self.arr[i], self.arr[best] = self.arr[best], self.arr[i]
-                i = best
-            # while
-        # if
-        self.arr.pop()
-        return res
-    # def
-
-
-# class
 
 class StatusLine:
     arr: list[Segment]
@@ -238,8 +149,8 @@ class StatusLine:
     def find(self, item: Segment, x):  # (Segment, int) -> (Segment, int)
         self.x = x
         start, end, mid = 0, len(self.arr) - 1, (len(self.arr) - 1) // 2
-        while start < end:
-            item_h, mid_h = item.calc(x), self.arr[mid].calc(x)
+        while start <= end:
+            item_h, mid_h = round(item.calc(x), PRECISION), round(self.arr[mid].calc(x), PRECISION)
             if item_h == mid_h:
                 return mid
             if item_h > mid_h:
@@ -251,11 +162,12 @@ class StatusLine:
 
     def delete(self, item: Segment, x):
         search = self.find(item, x)
-        if search:
+        if not search is None:
             self.arr.pop(search)
 
     def swap(self, item1: Segment, item2: Segment, x):
         index1 = self.find(item1, x)
+        index2 = None
 
         if not index1 is None:
             if index1 == len(self.arr):
@@ -266,8 +178,15 @@ class StatusLine:
                 index2 = index1 + 1 if self.arr[index1 + 1] == item2 else index1 - 1
             self.arr[index1], self.arr[index2] = self.arr[index2], self.arr[index1]
 
+            return index1 if index1 < index2 else index2
+        return None
+
     def above(self, index):
-        return self.arr[index + 1] if index < len(self.arr) - 1 else None
+        if index is not None and index < len(self.arr) - 1:
+            return self.arr[index + 1]
+        return None
 
     def below(self, index):
-        return self.arr[index - 1] if index > 0 else None
+        if index is not None and index > 0:
+            return self.arr[index - 1]
+        return None

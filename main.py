@@ -1,73 +1,67 @@
-from sys import argv
+import sys
 from helpers import *
-from enum import Enum
 import heapq
-from sortedcontainers import SortedList
 
 
-class EventType(Enum):
-    START = 0
-    END = 1
-    INTERSECTION = 2
+def interpret_input():
 
-
-class Event(Point):
-    def __init__(self, x, y, event_type, segment):
-        super().__init__(x, y)
-        self.type = event_type
-        self.segment = segment
-
-
-def interpret_file():
-    file = argv[1]
-    with open(file) as f:
-        test_num = int(f.readline().strip('\n'))
-        test_lines = []
-        for i in range(test_num):
-            segments_num = int(f.readline().strip('\n'))
-            segments = []
-            for j in range(segments_num):
-                raw_seg = [float(g) for g in f.readline().strip('\n').split(" ")]
-                p = Point(raw_seg[0], raw_seg[1])
-                q = Point(raw_seg[2], raw_seg[3])
-                segments.append(Segment(p, q))
-            test_lines.append(segments)
-        if f.readline() != '-1\n':
-            raise Exception('Invalid file format')
+    test_num = int(sys.stdin.readline().strip('\n'))
+    test_lines = []
+    for i in range(test_num):
+        segments_num = int(sys.stdin.readline().strip('\n'))
+        segments = []
+        for j in range(segments_num):
+            raw_seg = [float(g) for g in sys.stdin.readline().strip('\n').split(" ")]
+            p = Point(raw_seg[0], raw_seg[1])
+            q = Point(raw_seg[2], raw_seg[3])
+            seg = Segment(p, q)
+            segments.append(seg)
+        test_lines.append(segments)
+    if sys.stdin.readline() != '-1\n':
+        raise Exception('Invalid file format')
     return test_lines
+
+
+def add_intersection(seg1, seg2, events, x):
+    if seg1 and seg2:
+        point = intersection(seg1, seg2)
+        if point:
+            new_event = Event(point.x, point.y, EventType.INTERSECTION, [seg1, seg2])
+            if new_event and new_event not in events and new_event.x > x:
+                heapq.heappush(events, new_event)
 
 
 def handle_event(event, status, events):
     segment = event.segment
     x = event.x
+    if event.type == EventType.INTERSECTION:
+        index = status.swap(segment[0], segment[1], x)
+        above = status.above(index + 1)
+        below = status.below(index)
+        add_intersection(segment[0], above, events, x)
+        add_intersection(below, segment[1], events, x)
+        return 1
+
     if event.type == EventType.START:
         index = status.insert(segment, x)
         above = status.above(index)
         below = status.below(index)
-
-        if above:
-            point = intersection(segment, above)
-            new_event = Event(point.x, point.y, EventType.INTERSECTION, [above, segment])
-            if new_event:
-                heapq.heappush(events, new_event)
-        if below:
-            point = intersection(segment, below)
-            new_event = Event(point.x, point.y, EventType.INTERSECTION, [below, segment])
-            if new_event:
-                heapq.heappush(events, new_event)
+        add_intersection(segment, above, events, x)
+        add_intersection(below, segment, events, x)
         return 0
 
-    if event.type == EventType.INTERSECTION:
-        status.swap(segment[0], segment[1], x)
-        return 1
     if event.type == EventType.END:
-        pass
-    return 0
+        index = status.find(segment, x)
+        above = status.above(index)
+        below = status.below(index)
+        status.delete(segment, x)
+        add_intersection(below, above, events, x)
+        return 0
 
 
 def count_intersections_sweep(segments):
     events = []
-    counter = 0
+    counter, counter2 = 0, 0
     for segment in segments:
         events.append(Event(segment.p.x, segment.p.y, EventType.START, segment))
         events.append(Event(segment.q.x, segment.q.y, EventType.END, segment))
@@ -78,12 +72,11 @@ def count_intersections_sweep(segments):
     while events:
         event = heapq.heappop(events)
         counter += handle_event(event, status, events)
-
-    print(counter)
+    return counter
 
 
 if __name__ == '__main__':
-    tests_inputs = interpret_file()
-    count_intersections_sweep(tests_inputs[0])
+    tests_inputs = interpret_input()
 
-    pass
+    for t in tests_inputs:
+        sys.stdout.write(str(count_intersections_sweep(t)) + "\n")
